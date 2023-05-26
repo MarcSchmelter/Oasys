@@ -114,7 +114,7 @@ bool checkDistance(void){
   long duration = pulseIn(D6, HIGH);
   float distance = duration * 0.034 / 2;
   Serial.println("The distance is " + String(distance) + " cm.");
-  return distance <= 2.5;
+  return distance <= 3;
   //return distance <= 4.0;
 }
 
