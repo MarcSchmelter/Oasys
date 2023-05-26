@@ -7,7 +7,7 @@
 Adafruit_PN532 nfc(-1, -1);
 void checkNFC();
 Servo setServo, dispenseServo;
-int setting[] = {100, 200, 300, 500, 700, 1000, 0};
+int settings[] = {1, 2, 3, 5, 7, 1, 0};
 int currentSetting = 2;
 int keys[] = {4, 101, 21, 69};
 
@@ -16,12 +16,15 @@ void pressSet(int);
 void pressDispense(void);
 void incSetting(void);
 bool authenticate(uint8_t* auth);
+void buzz(void);
 
 
 void setup() {
   Serial.begin(115200);
   pinMode(D5, OUTPUT);
   pinMode(D6, INPUT);
+  pinMode(D7, OUTPUT);
+  digitalWrite(D7, LOW);
   setServo.attach(D3);
   dispenseServo.attach(D4);
   setServo.write(90);
@@ -46,7 +49,6 @@ void checkNFC()
   uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 };  // Buffer to store the returned UID
   uint8_t uidLength;                        // Length of the UID (4 or 7 bytes depending on ISO14443A card type)
   uint8_t auth[4]; // buffer for the authentication page, page 4
-  uint8_t p6[4];
   uint8_t p5[4]; // buffer for data read from page 5, interpreted differently depending on byte 0:
   // data[0] == 0 -> data[1] contains the amount of water already saved, read -> increase -> write back
   // data[0] == 1 -> might be useful later, in case the water source is refilled, to be implemented
@@ -73,6 +75,10 @@ void checkNFC()
       Serial.println(auth[i]);
     }
 
+
+
+    
+
     if (! authenticate(auth))
     {
       Serial.println("not an Oasys signature, refusing interaction");
@@ -82,6 +88,22 @@ void checkNFC()
     //if this goes through, we can get to work
 
     nfc.mifareultralight_ReadPage(5, p5);
+    // case to dispense some water
+    if (p5[0] == 0)
+    {
+      p5[2] += settings[p5[1]]; //inc with amount stored in target setting
+      Serial.println("water-counter has been increased to " + String(p5[2]));
+    nfc.mifareultralight_WritePage(5, p5); //writeback done, now we can take our time
+    buzz(); // notify that we are done interacting with the card
+    
+    pressSet(p5[1]);
+    pressDispense();
+    }
+
+
+    // placeholder for case p5[0] == 1
+    
+    
   }
 }
 
@@ -106,7 +128,7 @@ void pressSet(int target){
   while (currentSetting != target)
   {
 
-    incSetting; // increasing the setting
+    incSetting(); // increasing the setting
 
 
     // motion of pushing the button
@@ -119,12 +141,21 @@ void pressSet(int target){
     delay(2);
   }
   // notify for debugging
-  Serial.println("Settings button pressed, now in setting" + currentSetting);
+  Serial.println("Settings button pressed, now in setting " + String(currentSetting));
   }
   
 }
 
 void pressDispense(void){
+
+  while(!checkDistance()) {
+    //wait
+    Serial.println("Waiting for glass to be placed");
+    delay(200);
+  }
+
+  delay(500); // wait half a sec to avoid shooting immediately when a glass is discovered
+
   for(int pos = 85; pos >= 45; pos -= 5){
     dispenseServo.write(pos);
     delay(2);
@@ -133,7 +164,7 @@ void pressDispense(void){
   for(int pos = 45; pos <= 90; pos += 5){
     dispenseServo.write(pos);
     delay(2);
-  }
+  }  delay(10000); // idk how long it takes to fill a glass, lets wait a bit to avoid going crazy
 }
 
 bool authenticate(uint8_t* auth) {
@@ -143,7 +174,14 @@ bool authenticate(uint8_t* auth) {
       {
         return false;
       }
-      return true;
       
     }
+    return true;
+}
+
+void buzz() {
+  digitalWrite(D7, HIGH);
+  Serial.println("The buzzer makes a sound");
+  delay(100);
+  digitalWrite(D7, LOW);
 }
