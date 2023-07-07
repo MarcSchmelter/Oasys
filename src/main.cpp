@@ -54,7 +54,7 @@ void setup() {
 }
 
 void loop() {
-  String strArray1[] = {"Please present a card.", "Source at: " + String(source)}; 
+  String strArray1[] = {"Please present card", "Source at: " + String(source) + "ml"}; 
   if(source > 0){ 
   displayMultiple(strArray1);
   } else{ 
@@ -104,7 +104,7 @@ void checkNFC()
       return; //end here, wait for a proper card/app
     }
 
-    displayOled("Oasys card recognized!");
+    displayOled("Card recognized!");
 
     //if this goes through, we can get to work
 
@@ -133,7 +133,7 @@ void checkNFC()
     if (p5[0] == 1)
     {
       source = p5[1];
-      displayOled("Source refilled!");
+      displayOled("Source refilled");
       delay(1000);
     }
     
@@ -200,21 +200,23 @@ void pressDispense(uint8_t total){
   }  
 
   if(settings[currentSetting] * 100 > source){
-    displayOled("Dispensed amount: " + String(source) + " ml.");
+    String strArray2[] = {"Dispensed amount:",  String(source) + " ml"};
+    displayMultiple(strArray2);
     delay(3000);
-    displayOled("New total: " + String(total * 100)  + " ml.");
+    displayOled("New total: " + String(total * 100)  + " ml");
     delay(3000);
     source = 0;
-    displayOled("Source at: " + String(source) + " ml.");
+    displayOled("Source at: " + String(source) + " ml");
     return;
   }
   else {
     source -= settings[currentSetting] * 100;
-    displayOled("Dispensed amount: " + String(settings[currentSetting] * 100) + " ml.");
+    String strArray3[] = {"Dispensed amount:",  String(settings[currentSetting] * 100) + " ml"};
+    displayMultiple(strArray3);
     delay(3000);
-    displayOled("New total: " + String(total * 100)  + " ml.");
+    displayOled("New total: " + String(total * 100)  + " ml");
     delay(3000);
-    displayOled("Source at: " + String(source) + " ml.");
+    displayOled("Source at: " + String(source) + " ml");
   }
   
 
