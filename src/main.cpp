@@ -12,10 +12,10 @@ Adafruit_SSD1306 display(128,64, &Wire, -1);
 void checkNFC();
 
 Servo setServo, dispenseServo;
-int settings[] = {1, 2, 3, 5, 7, 1, 0};
+int settings[] = {1, 2, 3, 5, 7, 10, 0};
 int currentSetting = 2;
 int keys[] = {4, 101, 21, 69};
-int source = 0;
+int source = 10;
 
 bool checkDistance(void);
 void pressSet(int);
@@ -54,7 +54,7 @@ void setup() {
 }
 
 void loop() {
-  String strArray1[] = {"Please present card", "Source at: " + String(source) + "ml"}; 
+  String strArray1[] = {"Please present card", "Source at: " + String(source * 100) + "ml"}; 
   if(source > 0){ 
   displayMultiple(strArray1);
   } else{ 
@@ -118,7 +118,8 @@ void checkNFC()
         buzz();
         return;
       }
-      p5[2] += (source >= settings [p5[1]]) ? settings[p5[1]] : source; //inc with amount stored in target setting
+       
+      p5[2] += (source >= settings[p5[1]]) ? settings[p5[1]] : source; //inc with amount stored in target setting
       Serial.println("water-counter has been increased to " + String(p5[2]));
     nfc.mifareultralight_WritePage(5, p5); //writeback done, now we can take our time
     buzz(); // notify that we are done interacting with the card
@@ -126,7 +127,6 @@ void checkNFC()
     pressSet(p5[1]);
     pressDispense(p5[2]);
     }
-
 
     // placeholder for case p5[0] == 1
     
@@ -199,24 +199,26 @@ void pressDispense(uint8_t total){
     delay(2);
   }  
 
-  if(settings[currentSetting] * 100 > source){
-    String strArray2[] = {"Dispensed amount:",  String(source) + " ml"};
+  if(settings[currentSetting]  > source){
+    String strArray2[] = {"Dispensed amount:",  String(source * 100) + " ml"};
     displayMultiple(strArray2);
     delay(3000);
+    Serial.println(String(total));
     displayOled("New total: " + String(total * 100)  + " ml");
     delay(3000);
     source = 0;
-    displayOled("Source at: " + String(source) + " ml");
+    displayOled("Source at: " + String(source * 100) + " ml");
     return;
   }
   else {
-    source -= settings[currentSetting] * 100;
+    source -= settings[currentSetting];
     String strArray3[] = {"Dispensed amount:",  String(settings[currentSetting] * 100) + " ml"};
     displayMultiple(strArray3);
     delay(3000);
+    Serial.println(String(total));
     displayOled("New total: " + String(total * 100)  + " ml");
     delay(3000);
-    displayOled("Source at: " + String(source) + " ml");
+    displayOled("Source at: " + String(source * 100) + " ml");
   }
   
 
