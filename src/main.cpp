@@ -2,22 +2,30 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_PN532.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 #include <Servo.h>
 
 Adafruit_PN532 nfc(-1, -1);
+Adafruit_SSD1306 display(128,64, &Wire, -1);
+
 void checkNFC();
+
 Servo setServo, dispenseServo;
 int settings[] = {1, 2, 3, 5, 7, 1, 0};
 int currentSetting = 2;
 int keys[] = {4, 101, 21, 69};
+int source = 0;
 
 bool checkDistance(void);
 void pressSet(int);
-void pressDispense(void);
+void pressDispense(uint8_t);
 void incSetting(void);
 bool authenticate(uint8_t* auth);
 void buzz(void);
-
+void displayOled(String);
+void displayMultiple(String[]);
+int lengthArray(String[]);
 
 void setup() {
   Serial.begin(115200);
@@ -35,9 +43,23 @@ void setup() {
     Serial.print("Didn't find PN53x board");
     while (true) { delay(1); }
   }
+
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("SSD1306 allocation failed!");
+    while(true); // Don't proceed forever
+  }
+
+
+ 
 }
 
 void loop() {
+  String strArray1[] = {"Please present a card.", "Source at: " + String(source)}; 
+  if(source > 0){ 
+  displayMultiple(strArray1);
+  } else{ 
+    displayOled("Please refill");
+  }
   checkNFC();
   delay(2000);
 }
@@ -75,15 +97,14 @@ void checkNFC()
       Serial.println(auth[i]);
     }
 
-
-
-    
-
     if (! authenticate(auth))
     {
       Serial.println("not an Oasys signature, refusing interaction");
+      displayOled("Wrong card!");
       return; //end here, wait for a proper card/app
     }
+
+    displayOled("Oasys card recognized!");
 
     //if this goes through, we can get to work
 
@@ -91,18 +112,30 @@ void checkNFC()
     // case to dispense some water
     if (p5[0] == 0)
     {
-      p5[2] += settings[p5[1]]; //inc with amount stored in target setting
+      if(source == 0){
+        buzz();
+        buzz();
+        buzz();
+        return;
+      }
+      p5[2] += (source >= settings [p5[1]]) ? settings[p5[1]] : source; //inc with amount stored in target setting
       Serial.println("water-counter has been increased to " + String(p5[2]));
     nfc.mifareultralight_WritePage(5, p5); //writeback done, now we can take our time
     buzz(); // notify that we are done interacting with the card
     
     pressSet(p5[1]);
-    pressDispense();
+    pressDispense(p5[2]);
     }
 
 
     // placeholder for case p5[0] == 1
     
+    if (p5[0] == 1)
+    {
+      source = p5[1];
+      displayOled("Source refilled!");
+      delay(1000);
+    }
     
   }
 }
@@ -146,7 +179,7 @@ void pressSet(int target){
   
 }
 
-void pressDispense(void){
+void pressDispense(uint8_t total){
 
   while(!checkDistance()) {
     //wait
@@ -164,7 +197,29 @@ void pressDispense(void){
   for(int pos = 45; pos <= 90; pos += 5){
     dispenseServo.write(pos);
     delay(2);
-  }  delay(10000); // idk how long it takes to fill a glass, lets wait a bit to avoid going crazy
+  }  
+
+  if(settings[currentSetting] * 100 > source){
+    displayOled("Dispensed amount: " + String(source) + " ml.");
+    delay(3000);
+    displayOled("New total: " + String(total * 100)  + " ml.");
+    delay(3000);
+    source = 0;
+    displayOled("Source at: " + String(source) + " ml.");
+    return;
+  }
+  else {
+    source -= settings[currentSetting] * 100;
+    displayOled("Dispensed amount: " + String(settings[currentSetting] * 100) + " ml.");
+    delay(3000);
+    displayOled("New total: " + String(total * 100)  + " ml.");
+    delay(3000);
+    displayOled("Source at: " + String(source) + " ml.");
+  }
+  
+
+  
+  //delay(10000); // idk how long it takes to fill a glass, lets wait a bit to avoid going crazy
 }
 
 bool authenticate(uint8_t* auth) {
@@ -184,4 +239,32 @@ void buzz() {
   Serial.println("The buzzer makes a sound");
   delay(100);
   digitalWrite(D7, LOW);
+}
+
+void displayOled(String str){
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0,28);
+  display.println(str);
+  display.display();
+}
+
+int lengthArray(String strArray[]){
+  int length = 0;
+  while(strArray[length] != NULL){
+    length++;
+  }
+  return length;
+}
+
+void displayMultiple(String strArray[]){
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0,28);
+  for(int i = 0; i < lengthArray(strArray); i++){
+    display.println(strArray[i]);
+  }
+  display.display();
 }
