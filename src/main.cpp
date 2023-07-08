@@ -13,7 +13,8 @@ void checkNFC();
 
 Servo setServo, dispenseServo;
 int settings[] = {1, 2, 3, 5, 7, 10, 0};
-int currentSetting = 2;
+int delays[] = {8000, 14000, 20000, 31000, 43000, 61000, 0};
+int currentSetting = 0;
 int keys[] = {4, 101, 21, 69};
 int source = 10;
 
@@ -165,9 +166,9 @@ void pressSet(int target){
 
 
     // motion of pushing the button
-    for(int pos = 95; pos <= 145; pos += 5){
+    for(int pos = 95; pos <= 175; pos += 5){
     setServo.write(pos);
-    delay(2);
+    delay(10);
   }
   for(int pos = 145; pos >= 90; pos -= 5){
     setServo.write(pos);
@@ -181,6 +182,7 @@ void pressSet(int target){
 
 void pressDispense(uint8_t total){
 
+  //displayOled("Please place glass");
   while(!checkDistance()) {
     //wait
     Serial.println("Waiting for glass to be placed");
@@ -189,36 +191,39 @@ void pressDispense(uint8_t total){
 
   delay(500); // wait half a sec to avoid shooting immediately when a glass is discovered
 
-  for(int pos = 85; pos >= 45; pos -= 5){
+  for(int pos = 85; pos >= 20; pos -= 5){
     dispenseServo.write(pos);
-    delay(2);
+    delay(5);
   }
 
-  for(int pos = 45; pos <= 90; pos += 5){
+  for(int pos = 35; pos <= 90; pos += 5){
     dispenseServo.write(pos);
     delay(2);
   }  
 
+  int del = delays[currentSetting] / 3; // pick delay according to dispensed amount
   if(settings[currentSetting]  > source){
     String strArray2[] = {"Dispensed amount:",  String(source * 100) + " ml"};
     displayMultiple(strArray2);
-    delay(3000);
+    delay(del);
     Serial.println(String(total));
     displayOled("New total: " + String(total * 100)  + " ml");
-    delay(3000);
+    delay(del);
     source = 0;
     displayOled("Source at: " + String(source * 100) + " ml");
+    delay(del);
     return;
   }
   else {
     source -= settings[currentSetting];
     String strArray3[] = {"Dispensed amount:",  String(settings[currentSetting] * 100) + " ml"};
     displayMultiple(strArray3);
-    delay(3000);
+    delay(del);
     Serial.println(String(total));
     displayOled("New total: " + String(total * 100)  + " ml");
-    delay(3000);
+    delay(del);
     displayOled("Source at: " + String(source * 100) + " ml");
+    delay(del);
   }
   
 
