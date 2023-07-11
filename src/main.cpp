@@ -182,7 +182,7 @@ void pressSet(int target){
 
 void pressDispense(uint8_t total){
 
-  //displayOled("Please place glass");
+  displayOled("Please place glass");
   while(!checkDistance()) {
     //wait
     Serial.println("Waiting for glass to be placed");
